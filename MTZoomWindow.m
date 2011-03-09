@@ -21,7 +21,8 @@
 #pragma mark Defines
 ////////////////////////////////////////////////////////////////////////
 
-#define kZoomAnimationDuration 0.5f
+#define kDefaultZoomAnimationOptions  UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction
+#define kDefaultZoomAnimationDuration 0.5f
 
 #define kDefaultWidth  300
 #define kDefaultHeight 300
@@ -62,6 +63,8 @@
 @synthesize originalFrameInWindow = originalFrameInWindow_;
 @synthesize overlaySize = overlaySize_;
 @synthesize windowGestureRecognizer = windowGestureRecognizer_;
+@synthesize animationOptions = animationOptions_;
+@synthesize animationDuration = animationDuration_;
 @synthesize zoomedViewGestureRecognizer = zoomedViewGestureRecognizer_;
 @synthesize scrollEnabledBefore = scrollEnabledBefore_;
 
@@ -82,6 +85,8 @@
         originalSuperview_ = [targetView.superview retain];
 		newSuperview_ = self;
 		scrollEnabledBefore_ = NO;
+        animationOptions_ = kDefaultZoomAnimationOptions;
+        animationDuration_ = kDefaultZoomAnimationDuration;
 
         backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
         backgroundView_.backgroundColor = [UIColor blackColor];
@@ -155,25 +160,30 @@
 	[self saveProperties];
 
     // animate to fullscreen-display of imageView
-    [UIView animateWithDuration:kZoomAnimationDuration
+    [UIView animateWithDuration:self.animationDuration 
+                          delay:0. 
+                        options:self.animationOptions
                      animations:^{
-						 // make the black background visible
+                         // make the black background visible
                          self.backgroundView.alpha = 1.0f;
                          // TODO: set new size depending on original frame
                          self.zoomedView.frame = CGRectMake((self.frame.size.width-self.overlaySize.width)/2,
                                                             (self.frame.size.height-self.overlaySize.height)/2,
                                                             self.overlaySize.width,
                                                             self.overlaySize.height);
-                     } completion:^(BOOL finished) {
-						 [self enableZoomedinPropertyState];
+                     }
+                     completion:^(BOOL finished) {
+                         [self enableZoomedinPropertyState];
                      }];
 }
 
 - (void)zoomOut {
-    // zoom back out
-    [UIView animateWithDuration:kZoomAnimationDuration
+    // animate to fullscreen-display of imageView
+    [UIView animateWithDuration:self.animationDuration 
+                          delay:0. 
+                        options:self.animationOptions
                      animations:^{
-						 // hide black background
+                         // hide black background
                          self.backgroundView.alpha = 0.0f;
                          // set the frame of the imageView of the overlay back to original frame of image
                          [self.zoomedView setFrame:CGRectMake(self.originalFrameInWindow.origin.x, // + self.scrollView.contentOffset.x,
@@ -188,7 +198,7 @@
                          [self.originalSuperview insertSubview:self.zoomedView atIndex:self.subviewIndex];
                          // hide the overlay
                          self.alpha = 0.0f;
-
+                         
 						 [self restoreProperties];
                      }];
 }

@@ -35,6 +35,10 @@
     CGSize overlaySize_;
 	// saves if scrolling was enabled on zoomedView before zooming in
 	BOOL scrollEnabledBefore_;
+    // animation options
+    UIViewAnimationOptions animationOptions_;
+    // animation duration
+    NSTimeInterval animationDuration_;
 
 	// Gesture recognizer on the zoomedView
 	UIGestureRecognizer *zoomedViewGestureRecognizer_;
@@ -47,6 +51,9 @@
 @property (nonatomic, assign) CGSize overlaySize;
 @property (nonatomic, retain) UIGestureRecognizer *zoomedViewGestureRecognizer;
 @property (nonatomic, retain) UIGestureRecognizer *windowGestureRecognizer;
+@property (nonatomic) UIViewAnimationOptions animationOptions;
+@property (nonatomic) NSTimeInterval animationDuration;
+
 
 - (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass;
 
