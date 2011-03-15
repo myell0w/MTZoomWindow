@@ -119,8 +119,8 @@
         // Gesture Recognition to Zoom In/Out
         windowGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
 																		   action:@selector(handleGesture:)];
-        zoomedViewGestureRecognizer_ = [[[gestureRecognizerClass alloc] initWithTarget:self
-																				action:@selector(handleGesture:)] autorelease];
+        zoomedViewGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
+																				action:@selector(handleGesture:)];
 
         [self addGestureRecognizer:windowGestureRecognizer_];
         [zoomedView_ addGestureRecognizer:zoomedViewGestureRecognizer_];
