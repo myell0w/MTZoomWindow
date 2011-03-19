@@ -56,5 +56,6 @@
 
 
 - (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass;
+- (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass wrapInScrollView:(BOOL)wrapInScrollView;
 
 @end

@@ -22,11 +22,12 @@
 ////////////////////////////////////////////////////////////////////////
 
 #define kDefaultZoomAnimationOptions  UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction
-#define kDefaultZoomAnimationDuration 0.5f
+#define kDefaultZoomAnimationDuration 0.35f
 
 #define kDefaultWidth  300
 #define kDefaultHeight 300
 
+#define kDefaultWrapInScrollView YES
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -74,12 +75,16 @@
 ////////////////////////////////////////////////////////////////////////
 
 - (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass {
+    return [self initWithTargetView:targetView gestureRecognizerClass:gestureRecognizerClass wrapInScrollView:kDefaultWrapInScrollView];
+}
+ 
+- (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass wrapInScrollView:(BOOL)wrapInScrollView {
     if ((self = [super initWithFrame:[UIScreen mainScreen].bounds])) {
         self.windowLevel = UIWindowLevelStatusBar + 2.0f;
         self.backgroundColor = [UIColor clearColor];
         self.alpha = 0.0f;
         self.hidden = NO;
-
+        
         overlaySize_ = CGSizeMake(kDefaultWidth,kDefaultHeight);
         zoomedView_ = [targetView retain];
         originalSuperview_ = [targetView.superview retain];
@@ -87,45 +92,48 @@
 		scrollEnabledBefore_ = NO;
         animationOptions_ = kDefaultZoomAnimationOptions;
         animationDuration_ = kDefaultZoomAnimationDuration;
-
+        
         backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
         backgroundView_.backgroundColor = [UIColor blackColor];
         backgroundView_.alpha = 0.0f;
         [self addSubview:backgroundView_];
-
+        
 		// retreive index of zoomedView in superview
         subviewIndex_ = 0;
         for (UIView *subview in targetView.superview.subviews) {
             if (subview == targetView) {
                 break;
             }
-
+            
             subviewIndex_++;
         }
-
+        
 		// if the zoomed view is not scrollable, embed it in a scrollView
-        if (![targetView isKindOfClass:[UIScrollView class]] && ![targetView isKindOfClass:NSClassFromString(@"MKMapView")]) {
-            /*scrollView_ = [[[UIScrollView alloc] initWithFrame:self.frame] autorelease];
-			 scrollView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            scrollView_.maximumZoomScale = 3.0f;
-            scrollView_.showsVerticalScrollIndicator = NO;
-            scrollView_.showsHorizontalScrollIndicator = NO;
-            scrollView_.delegate = self;
-            [self addSubview:scrollView_];
-
-            newSuperview_ = scrollView_;*/
+        if (wrapInScrollView && 
+            ![targetView isKindOfClass:[UIScrollView class]] && 
+            ![targetView isKindOfClass:NSClassFromString(@"MKMapView")]) {
+            UIScrollView *scrollView = [[[UIScrollView alloc] initWithFrame:self.frame] autorelease];
+            
+            scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            scrollView.maximumZoomScale = 2.0f;
+            scrollView.showsVerticalScrollIndicator = NO;
+            scrollView.showsHorizontalScrollIndicator = NO;
+            scrollView.delegate = self;
+            [self addSubview:scrollView];
+            
+            newSuperview_ = scrollView;
         }
-
+        
         // Gesture Recognition to Zoom In/Out
         windowGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
 																		   action:@selector(handleGesture:)];
         zoomedViewGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
-																				action:@selector(handleGesture:)];
-
-        [self addGestureRecognizer:windowGestureRecognizer_];
+                                                                               action:@selector(handleGesture:)];
+        
+        [newSuperview_ addGestureRecognizer:windowGestureRecognizer_];
         [zoomedView_ addGestureRecognizer:zoomedViewGestureRecognizer_];
     }
-
+    
     return self;
 }
 
@@ -135,7 +143,7 @@
 	[originalSuperview_ release], originalSuperview_ = nil;
 	[zoomedViewGestureRecognizer_ release], zoomedViewGestureRecognizer_ = nil;
 	[windowGestureRecognizer_ release], windowGestureRecognizer_ = nil;
-
+    
     [super dealloc];
 }
 
@@ -148,7 +156,7 @@
 	// save frames before zoom operation
 	self.originalFrameInWindow = [self.zoomedView convertRect:self.zoomedView.bounds toView:nil];
 	self.originalFrameInSuperview = self.zoomedView.frame;
-
+    
 	// add to new superview
 	[self.newSuperview addSubview:self.zoomedView];
 	// the zoomedView now has another superview and therefore we must change it's frame
@@ -158,7 +166,7 @@
 	self.alpha = 1.0f;
 	// save important property-states that are changed during zooming
 	[self saveProperties];
-
+    
     // animate to fullscreen-display of imageView
     [UIView animateWithDuration:self.animationDuration 
                           delay:0. 
@@ -178,16 +186,23 @@
 }
 
 - (void)zoomOut {
+    // if superview is a scrollView, reset zoom-scale
+    if ([self.newSuperview respondsToSelector:@selector(setZoomScale:animated:)]) {
+        [self.newSuperview performSelector:@selector(setZoomScale:animated:)
+                                withObject:[NSNumber numberWithFloat:1.f] 
+                                withObject:[NSNumber numberWithBool:YES]];
+    }
+    
     // animate to fullscreen-display of imageView
     [UIView animateWithDuration:self.animationDuration 
                           delay:0. 
-                        options:self.animationOptions
+                        options:self.animationOptions | UIViewAnimationOptionBeginFromCurrentState
                      animations:^{
                          // hide black background
                          self.backgroundView.alpha = 0.0f;
                          // set the frame of the imageView of the overlay back to original frame of image
-                         [self.zoomedView setFrame:CGRectMake(self.originalFrameInWindow.origin.x, // + self.scrollView.contentOffset.x,
-                                                              self.originalFrameInWindow.origin.y, // + self.scrollView.contentOffset.y,
+                         [self.zoomedView setFrame:CGRectMake(self.originalFrameInWindow.origin.x,
+                                                              self.originalFrameInWindow.origin.y,
                                                               self.originalFrameInWindow.size.width,
                                                               self.originalFrameInWindow.size.height)];
                      }
@@ -221,7 +236,7 @@
 - (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
     if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
         // is the targetView currently zoomed in?
-        if (self.zoomedView.superview == self) {
+        if (self.zoomedView.superview == self.newSuperview) {
             [self zoomOut];
         }
 		// currently zoomed out -> zoom in
@@ -232,10 +247,10 @@
 }
 
 - (void)saveProperties {
-	 if ([self.zoomedView respondsToSelector:@selector(isScrollEnabled)]) {
-		 id zoomedViewId = self.zoomedView;
-		 self.scrollEnabledBefore = [zoomedViewId isScrollEnabled];
-	 }
+    if ([self.zoomedView respondsToSelector:@selector(isScrollEnabled)]) {
+        id zoomedViewId = self.zoomedView;
+        self.scrollEnabledBefore = [zoomedViewId isScrollEnabled];
+    }
 }
 - (void)restoreProperties {
 	if ([self.zoomedView respondsToSelector:@selector(setScrollEnabled:)]) {
