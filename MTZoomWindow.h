@@ -15,6 +15,9 @@
 
 #import <Foundation/Foundation.h>
 
+// forward-declaration of delegate
+@protocol MTZoomWindowDelegate;
+
 
 @interface MTZoomWindow : UIWindow <UIScrollViewDelegate> {
     // the black background
@@ -44,6 +47,8 @@
 	UIGestureRecognizer *zoomedViewGestureRecognizer_;
 	// Gesture Recognizer on the window itself
 	UIGestureRecognizer *windowGestureRecognizer_;
+    
+    id<MTZoomWindowDelegate> delegate_;
 }
 
 @property (nonatomic, retain) UIView *backgroundView;
@@ -53,9 +58,22 @@
 @property (nonatomic, retain) UIGestureRecognizer *windowGestureRecognizer;
 @property (nonatomic) UIViewAnimationOptions animationOptions;
 @property (nonatomic) NSTimeInterval animationDuration;
+@property (nonatomic, assign) id<MTZoomWindowDelegate> delegate;
 
 
 - (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass;
 - (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass wrapInScrollView:(BOOL)wrapInScrollView;
+
+@end
+
+
+@protocol MTZoomWindowDelegate <NSObject>
+
+@optional
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow willZoomInView:(UIView *)view;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow didZoomInView:(UIView *)view;
+
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow willZoomOutView:(UIView *)view;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow didZoomOutView:(UIView *)view;
 
 @end

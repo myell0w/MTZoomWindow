@@ -68,6 +68,7 @@
 @synthesize animationDuration = animationDuration_;
 @synthesize zoomedViewGestureRecognizer = zoomedViewGestureRecognizer_;
 @synthesize scrollEnabledBefore = scrollEnabledBefore_;
+@synthesize delegate = delegate_;
 
 ////////////////////////////////////////////////////////////////////////
 #pragma mark -
@@ -138,6 +139,7 @@
 }
 
 - (void)dealloc {
+    delegate_ = nil;
 	[backgroundView_ release], backgroundView_ = nil;
 	[zoomedView_ release], zoomedView_ = nil;
 	[originalSuperview_ release], originalSuperview_ = nil;
@@ -153,6 +155,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 - (void)zoomIn {
+    if ([self.delegate respondsToSelector:@selector(zoomWindow:willZoomInView:)]) {
+        [self.delegate zoomWindow:self willZoomInView:self.zoomedView];
+    }
+    
 	// save frames before zoom operation
 	self.originalFrameInWindow = [self.zoomedView convertRect:self.zoomedView.bounds toView:nil];
 	self.originalFrameInSuperview = self.zoomedView.frame;
@@ -182,10 +188,18 @@
                      }
                      completion:^(BOOL finished) {
                          [self enableZoomedinPropertyState];
+                         
+                         if ([self.delegate respondsToSelector:@selector(zoomWindow:didZoomInView:)]) {
+                             [self.delegate zoomWindow:self didZoomInView:self.zoomedView];
+                         }
                      }];
 }
 
 - (void)zoomOut {
+    if ([self.delegate respondsToSelector:@selector(zoomWindow:willZoomOutView:)]) {
+        [self.delegate zoomWindow:self willZoomOutView:self.zoomedView];
+    }
+    
     // if superview is a scrollView, reset zoom-scale
     if ([self.newSuperview respondsToSelector:@selector(setZoomScale:animated:)]) {
         [self.newSuperview performSelector:@selector(setZoomScale:animated:)
@@ -215,6 +229,10 @@
                          self.alpha = 0.0f;
                          
 						 [self restoreProperties];
+                         
+                         if ([self.delegate respondsToSelector:@selector(zoomWindow:didZoomOutView:)]) {
+                             [self.delegate zoomWindow:self didZoomOutView:self.zoomedView];
+                         }
                      }];
 }
 
