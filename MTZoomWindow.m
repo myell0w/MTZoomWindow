@@ -97,6 +97,7 @@
         backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
         backgroundView_.backgroundColor = [UIColor blackColor];
         backgroundView_.alpha = 0.0f;
+        backgroundView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self addSubview:backgroundView_];
         
 		// retreive index of zoomedView in superview
@@ -124,6 +125,9 @@
             
             newSuperview_ = scrollView;
         }
+        
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        newSuperview_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
         // Gesture Recognition to Zoom In/Out
         windowGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
@@ -162,6 +166,18 @@
 	// save frames before zoom operation
 	self.originalFrameInWindow = [self.zoomedView convertRect:self.zoomedView.bounds toView:nil];
 	self.originalFrameInSuperview = self.zoomedView.frame;
+    
+    // simple landscape-support: apply rotation-transform on zoomedView
+    if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
+        if ([self.newSuperview isKindOfClass:[UIScrollView class]]) {
+            // workaround for scrolling-bug in landscape: disable scrolling/zooming
+            UIScrollView *scrollView = (UIScrollView *)self.newSuperview;
+            scrollView.maximumZoomScale = 1.0f;
+            scrollView.scrollEnabled = NO;
+        }
+        
+        self.zoomedView.transform = CGAffineTransformMakeRotation(-3.14159 * (-90) / 180.0);
+    }
     
 	// add to new superview
 	[self.newSuperview addSubview:self.zoomedView];
@@ -221,6 +237,11 @@
                                                               self.originalFrameInWindow.size.height)];
                      }
                      completion:^(BOOL finished) {
+                         if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
+                             // reset rotation
+                             self.zoomedView.transform = CGAffineTransformIdentity;
+                         }
+
                          // reset frame to original frame in original superview
                          self.zoomedView.frame = self.originalFrameInSuperview;
                          // insert subview in original superview at original index
