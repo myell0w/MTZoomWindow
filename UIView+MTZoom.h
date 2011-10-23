@@ -1,7 +1,7 @@
 //
-//  MTZoomWindow.h
+//  UIView+MTZoom.h
 //
-//  Created by Matthias Tretter on 8.3.2011.
+//  Created by Matthias Tretter on 23.10.2011.
 //  Copyright (c) 2009-2011 Matthias Tretter, @myell0w. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -13,28 +13,23 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-#import <Foundation/Foundation.h>
-#import "UIView+MTZoom.h"
+#import <UIKit/UIKit.h>
 
-typedef enum {
-    MTZoomGestureTap        = 1,
-    MTZoomGestureDoubleTap  = 2,
-    MTZoomGesturePinch      = 4
-} MTZoomGesture;
+typedef void (^mt_zoom_block)();
 
-@interface MTZoomWindow : UIWindow <UIScrollViewDelegate>
+@interface UIView (MTZoom)
 
-@property (nonatomic, retain) UIView *backgroundView;
-@property (nonatomic, assign) NSInteger zoomGestures;
-@property (nonatomic, assign) UIViewAnimationOptions animationOptions;
-@property (nonatomic, assign) NSTimeInterval animationDuration;
-@property (nonatomic, assign) NSTimeInterval animationDelay;
+/** If yes, the view will be put into a scrollview when zoomed in */
+@property (nonatomic, assign, getter = isWrappedInScrollviewWhenZoomed) BOOL wrapInScrollviewWhenZoomed;
+/** The size of the view when zoomed in */
+@property (nonatomic, assign) CGSize zoomedSize;
+/** the view that acts as a placeholder while self is zoomedIn */
+@property (nonatomic, retain) UIView *zoomPlaceholderView;
 
-@property (nonatomic, readonly, getter = isZoomedIn) BOOL zoomedIn;
+- (void)zoomIn;
+- (void)zoomOut;
 
-+ (MTZoomWindow *)sharedWindow;
-
-- (void)zoomView:(UIView *)view toSize:(CGSize)size completion:(mt_zoom_block)completionBlock;
-- (void)zoomOutWithCompletion:(mt_zoom_block)completionBlock;
+- (void)zoomInWithPreparation:(mt_zoom_block)preparationBlock completion:(mt_zoom_block)completionBlock;
+- (void)zoomOutWithPreparation:(mt_zoom_block)preparationBlock completion:(mt_zoom_block)completionBlock;
 
 @end

@@ -15,40 +15,17 @@
 
 #import "MTZoomWindow.h"
 
-
-////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Defines
-////////////////////////////////////////////////////////////////////////
-
-#define kDefaultZoomAnimationOptions  UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction
-#define kDefaultZoomAnimationDuration 0.35f
-
-#define kDefaultWidth  300
-#define kDefaultHeight 300
-
-#define kDefaultWrapInScrollView YES
-
-
-////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Private Class Extension
-////////////////////////////////////////////////////////////////////////
-
 @interface MTZoomWindow ()
 
-@property (nonatomic, retain) UIView *originalSuperview;
-@property (nonatomic, assign) UIView *newSuperview;
-@property (nonatomic) NSInteger subviewIndex;
-@property (nonatomic) CGRect originalFrameInSuperview;
-@property (nonatomic) CGRect originalFrameInWindow;
-@property (nonatomic, getter=isScrollEnabledBefore) BOOL scrollEnabledBefore;
+@property (nonatomic, retain) UIView *zoomedView;
+@property (nonatomic, retain) UIScrollView *scrollView;
+@property (nonatomic, readonly) UIView *zoomSuperview;
+@property (nonatomic, retain) NSMutableSet *gestureRecognizers;
 
 - (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer;
 
-- (void)saveProperties;
-- (void)restoreProperties;
-- (void)enableZoomedinPropertyState;
+- (void)orientationWillChange:(NSNotification *)note;
+- (void)orientationDidChange:(NSNotification *)note;
 
 @end
 
@@ -56,205 +33,217 @@
 @implementation MTZoomWindow
 
 @synthesize backgroundView = backgroundView_;
-@synthesize zoomedView = zoomedView_;
-@synthesize originalSuperview = originalSuperview_;
-@synthesize newSuperview = newSuperview_;
-@synthesize subviewIndex = subviewIndex_;
-@synthesize originalFrameInSuperview = originalFrameInSuperview_;
-@synthesize originalFrameInWindow = originalFrameInWindow_;
-@synthesize overlaySize = overlaySize_;
-@synthesize windowGestureRecognizer = windowGestureRecognizer_;
+@synthesize zoomGestures = zoomGestures_;
 @synthesize animationOptions = animationOptions_;
 @synthesize animationDuration = animationDuration_;
-@synthesize zoomedViewGestureRecognizer = zoomedViewGestureRecognizer_;
-@synthesize scrollEnabledBefore = scrollEnabledBefore_;
-@synthesize delegate = delegate_;
+@synthesize animationDelay = animationDelay_;
+@synthesize scrollView = scrollView_;
+@synthesize zoomedView = zoomedView_;
+@synthesize gestureRecognizers = gestureRecognizers_;
+
+#import <QuartzCore/QuartzCore.h>
 
 ////////////////////////////////////////////////////////////////////////
 #pragma mark -
 #pragma mark Lifecycle
 ////////////////////////////////////////////////////////////////////////
 
-- (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass {
-    return [self initWithTargetView:targetView gestureRecognizerClass:gestureRecognizerClass wrapInScrollView:kDefaultWrapInScrollView];
-}
- 
-- (id)initWithTargetView:(UIView *)targetView gestureRecognizerClass:(Class)gestureRecognizerClass wrapInScrollView:(BOOL)wrapInScrollView {
-    if ((self = [super initWithFrame:[UIScreen mainScreen].bounds])) {
+- (id)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        // setup window
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.windowLevel = UIWindowLevelStatusBar + 2.0f;
         self.backgroundColor = [UIColor clearColor];
-        self.alpha = 0.0f;
-        self.hidden = NO;
         
-        overlaySize_ = CGSizeMake(kDefaultWidth,kDefaultHeight);
-        zoomedView_ = [targetView retain];
-        originalSuperview_ = [targetView.superview retain];
-		newSuperview_ = self;
-		scrollEnabledBefore_ = NO;
-        animationOptions_ = kDefaultZoomAnimationOptions;
-        animationDuration_ = kDefaultZoomAnimationDuration;
-        
+        // setup black backgroundView
         backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
         backgroundView_.backgroundColor = [UIColor blackColor];
         backgroundView_.alpha = 0.0f;
         backgroundView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self addSubview:backgroundView_];
         
-		// retreive index of zoomedView in superview
-        subviewIndex_ = 0;
-        for (UIView *subview in targetView.superview.subviews) {
-            if (subview == targetView) {
-                break;
-            }
-            
-            subviewIndex_++;
-        }
+        // setup scrollview
+        scrollView_ = [[UIScrollView alloc] initWithFrame:self.frame];
+        scrollView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        scrollView_.maximumZoomScale = 2.0f;
+        scrollView_.showsVerticalScrollIndicator = NO;
+        scrollView_.showsHorizontalScrollIndicator = NO;
+        scrollView_.delegate = self;
         
-		// if the zoomed view is not scrollable, embed it in a scrollView
-        if (wrapInScrollView && 
-            ![targetView isKindOfClass:[UIScrollView class]] && 
-            ![targetView isKindOfClass:NSClassFromString(@"MKMapView")]) {
-            UIScrollView *scrollView = [[[UIScrollView alloc] initWithFrame:self.frame] autorelease];
-            
-            scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            scrollView.maximumZoomScale = 2.0f;
-            scrollView.showsVerticalScrollIndicator = NO;
-            scrollView.showsHorizontalScrollIndicator = NO;
-            scrollView.delegate = self;
-            [self addSubview:scrollView];
-            
-            newSuperview_ = scrollView;
-        }
+        // setup animation properties
+        animationOptions_ = UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction;
+        animationDuration_ = 0.4;
+        animationDelay_ = 0.0;
         
-        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        newSuperview_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        gestureRecognizers_ = [[NSMutableSet alloc] init];
+        self.zoomGestures = MTZoomGestureTap | MTZoomGesturePinch;
         
-        // Gesture Recognition to Zoom In/Out
-        windowGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
-																		   action:@selector(handleGesture:)];
-        zoomedViewGestureRecognizer_ = [[gestureRecognizerClass alloc] initWithTarget:self
-                                                                               action:@selector(handleGesture:)];
+        // register for orientation change notification
+        [[NSNotificationCenter defaultCenter] addObserver: self
+                                                 selector: @selector(orientationWillChange:)
+                                                     name: UIApplicationWillChangeStatusBarOrientationNotification
+                                                   object: nil];
+        [[NSNotificationCenter defaultCenter] addObserver: self
+                                                 selector: @selector(orientationDidChange:)
+                                                     name: UIApplicationDidChangeStatusBarOrientationNotification
+                                                   object: nil];
         
-        [newSuperview_ addGestureRecognizer:windowGestureRecognizer_];
-        [zoomedView_ addGestureRecognizer:zoomedViewGestureRecognizer_];
+        scrollView_.layer.borderWidth = 2.f;
+        scrollView_.layer.borderColor = [UIColor blueColor].CGColor;
     }
     
     return self;
 }
 
 - (void)dealloc {
-    delegate_ = nil;
-	[backgroundView_ release], backgroundView_ = nil;
-	[zoomedView_ release], zoomedView_ = nil;
-	[originalSuperview_ release], originalSuperview_ = nil;
-	[zoomedViewGestureRecognizer_ release], zoomedViewGestureRecognizer_ = nil;
-	[windowGestureRecognizer_ release], windowGestureRecognizer_ = nil;
+    [[NSNotificationCenter defaultCenter] removeObserver: self
+                                                    name: UIApplicationWillChangeStatusBarOrientationNotification
+                                                  object: nil];
+    [[NSNotificationCenter defaultCenter] removeObserver: self
+                                                    name: UIApplicationDidChangeStatusBarOrientationNotification
+                                                  object: nil];
+    
+    [backgroundView_ release], backgroundView_ = nil;
+    [zoomedView_ release], zoomedView_ = nil;
+    [scrollView_ release], scrollView_ = nil;
+    [gestureRecognizers_ release], gestureRecognizers_ = nil;
     
     [super dealloc];
 }
 
 ////////////////////////////////////////////////////////////////////////
 #pragma mark -
-#pragma mark Zooming
+#pragma mark MTZoomWindow
 ////////////////////////////////////////////////////////////////////////
 
-- (void)zoomIn {
-    if ([self.delegate respondsToSelector:@selector(zoomWindow:willZoomInView:)]) {
-        [self.delegate zoomWindow:self willZoomInView:self.zoomedView];
-    }
+- (void)zoomView:(UIView *)view toSize:(CGSize)size completion:(mt_zoom_block)completionBlock {
+    self.zoomedView = view;
     
-	// save frames before zoom operation
-	self.originalFrameInWindow = [self.zoomedView convertRect:self.zoomedView.bounds toView:nil];
-	self.originalFrameInSuperview = self.zoomedView.frame;
+    // save frames before zoom operation
+	CGRect originalFrameInWindow = [view convertRect:view.bounds toView:nil];
+    CGSize zoomedSize = view.zoomedSize;
     
-    // simple landscape-support: apply rotation-transform on zoomedView
-    if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
-        if ([self.newSuperview isKindOfClass:[UIScrollView class]]) {
-            // workaround for scrolling-bug in landscape: disable scrolling/zooming
-            UIScrollView *scrollView = (UIScrollView *)self.newSuperview;
-            scrollView.maximumZoomScale = 1.0f;
-            scrollView.scrollEnabled = NO;
-        }
-        
-        self.zoomedView.transform = CGAffineTransformMakeRotation(-3.14159 * (-90) / 180.0);
-    }
+    // pre-setup
+    self.backgroundView.alpha = 0.f;
+    self.hidden = NO;
     
-	// add to new superview
-	[self.newSuperview addSubview:self.zoomedView];
-	// the zoomedView now has another superview and therefore we must change it's frame
-	// now it appears on the same place like before
-	self.zoomedView.frame = self.originalFrameInWindow;
-	// make the overlay-window visible
-	self.alpha = 1.0f;
-	// save important property-states that are changed during zooming
-	[self saveProperties];
+    // the zoomedView now has another superview and therefore we must change it's frame
+	// to still visually appear on the same place like before to the user
+    [self.zoomSuperview addSubview:self.zoomedView];
+    self.zoomedView.frame = originalFrameInWindow;
+    self.zoomedView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     
-    // animate to fullscreen-display of imageView
-    [UIView animateWithDuration:self.animationDuration 
-                          delay:0. 
-                        options:self.animationOptions
+    [UIView animateWithDuration:self.animationDuration
+                          delay:self.animationDelay
+                        options:self.animationOptions 
                      animations:^{
-                         // make the black background visible
-                         self.backgroundView.alpha = 1.0f;
-                         // TODO: set new size depending on original frame
-                         self.zoomedView.frame = CGRectMake((self.frame.size.width-self.overlaySize.width)/2,
-                                                            (self.frame.size.height-self.overlaySize.height)/2,
-                                                            self.overlaySize.width,
-                                                            self.overlaySize.height);
-                     }
-                     completion:^(BOOL finished) {
-                         [self enableZoomedinPropertyState];
-                         
-                         if ([self.delegate respondsToSelector:@selector(zoomWindow:didZoomInView:)]) {
-                             [self.delegate zoomWindow:self didZoomInView:self.zoomedView];
+                         self.backgroundView.alpha = 1.f;
+                         self.zoomedView.frame = CGRectMake((self.frame.size.width-zoomedSize.width)/2.f, (self.frame.size.height-zoomedSize.height)/2.f,
+                                                            zoomedSize.width, zoomedSize.height);
+                     } completion:^(BOOL finished) {
+                         if (completionBlock != nil) {
+                             completionBlock();
                          }
                      }];
 }
 
-- (void)zoomOut {
-    if ([self.delegate respondsToSelector:@selector(zoomWindow:willZoomOutView:)]) {
-        [self.delegate zoomWindow:self willZoomOutView:self.zoomedView];
-    }
+- (void)zoomOutWithCompletion:(mt_zoom_block)completionBlock {
+    CGRect destinationFrameInWindow = [self.zoomedView.zoomPlaceholderView convertRect:self.zoomedView.zoomPlaceholderView.bounds toView:nil];
+    UIView *zoomSuperview = self.zoomSuperview;
     
     // if superview is a scrollView, reset zoom-scale
-    if ([self.newSuperview respondsToSelector:@selector(setZoomScale:animated:)]) {
-        [self.newSuperview performSelector:@selector(setZoomScale:animated:)
-                                withObject:[NSNumber numberWithFloat:1.f] 
-                                withObject:[NSNumber numberWithBool:YES]];
+    if ([zoomSuperview respondsToSelector:@selector(setZoomScale:animated:)]) {
+        [zoomSuperview performSelector:@selector(setZoomScale:animated:)
+                            withObject:[NSNumber numberWithFloat:1.f] 
+                            withObject:[NSNumber numberWithBool:YES]];
     }
     
-    // animate to fullscreen-display of imageView
-    [UIView animateWithDuration:self.animationDuration 
-                          delay:0. 
+    [UIView animateWithDuration:self.animationDuration
+                          delay:self.animationDelay
                         options:self.animationOptions | UIViewAnimationOptionBeginFromCurrentState
                      animations:^{
-                         // hide black background
                          self.backgroundView.alpha = 0.0f;
-                         // set the frame of the imageView of the overlay back to original frame of image
-                         [self.zoomedView setFrame:CGRectMake(self.originalFrameInWindow.origin.x,
-                                                              self.originalFrameInWindow.origin.y,
-                                                              self.originalFrameInWindow.size.width,
-                                                              self.originalFrameInWindow.size.height)];
-                     }
-                     completion:^(BOOL finished) {
-                         if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)) {
-                             // reset rotation
-                             self.zoomedView.transform = CGAffineTransformIdentity;
-                         }
-
-                         // reset frame to original frame in original superview
-                         self.zoomedView.frame = self.originalFrameInSuperview;
-                         // insert subview in original superview at original index
-                         [self.originalSuperview insertSubview:self.zoomedView atIndex:self.subviewIndex];
-                         // hide the overlay
-                         self.alpha = 0.0f;
+                         self.zoomedView.frame = destinationFrameInWindow;
+                     } completion:^(BOOL finished) {
+                         // reset zoomed view to original position
+                         self.zoomedView.frame = self.zoomedView.zoomPlaceholderView.frame;
+                         self.zoomedView.autoresizingMask = self.zoomedView.zoomPlaceholderView.autoresizingMask;
+                         [self.zoomedView.zoomPlaceholderView.superview addSubview:self.zoomedView];
+                         [self.zoomedView.zoomPlaceholderView removeFromSuperview];
+                         self.zoomedView.zoomPlaceholderView = nil;
+                         // hide window
+                         self.hidden = YES;
                          
-						 [self restoreProperties];
-                         
-                         if ([self.delegate respondsToSelector:@selector(zoomWindow:didZoomOutView:)]) {
-                             [self.delegate zoomWindow:self didZoomOutView:self.zoomedView];
+                         if (completionBlock != nil) {
+                             completionBlock();
                          }
                      }];
+}
+
+- (UIView *)zoomSuperview {
+    if (self.zoomedView.wrapInScrollviewWhenZoomed) {
+        if (self.scrollView.superview == nil) {
+            [self insertSubview:self.scrollView atIndex:1];
+        }
+        return self.scrollView;
+    } else {
+        [self.scrollView removeFromSuperview];
+        return self;
+    }
+}
+
+- (BOOL)isZoomedIn {
+    return !self.hidden && self.backgroundView.alpha > 0.f;
+}
+
+- (void)setZoomGestures:(NSInteger)zoomGestures {
+    if (zoomGestures != zoomGestures_) {
+        zoomGestures_ = zoomGestures;
+        
+        // remove old gesture recognizers
+        for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
+            [self.backgroundView removeGestureRecognizer:gestureRecognizer];
+        }
+        
+        // create new gesture recognizers
+        if (zoomGestures & MTZoomGestureTap) {
+            UITapGestureRecognizer *tapGestureRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                                    action:@selector(handleGesture:)] autorelease];
+            [self.gestureRecognizers addObject:tapGestureRecognizer];
+        }
+        if (zoomGestures & MTZoomGestureDoubleTap) {
+            UITapGestureRecognizer *tapGestureRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                                    action:@selector(handleGesture:)] autorelease];
+            tapGestureRecognizer.numberOfTapsRequired = 2;
+            [self.gestureRecognizers addObject:tapGestureRecognizer];
+        }
+        if (zoomGestures & MTZoomGesturePinch) {
+            UIPinchGestureRecognizer *pinchGestureRecognizer = [[[UIPinchGestureRecognizer alloc] initWithTarget:self
+                                                                                                          action:@selector(handleGesture:)] autorelease];
+            [self.gestureRecognizers addObject:pinchGestureRecognizer];
+        }
+        
+        // add new gesture recognizers to views
+        for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
+            [self.backgroundView addGestureRecognizer:gestureRecognizer];
+            // TODO: add to zoomedView
+        }
+    }
+}
+
+- (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
+        if ([gestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]]) {
+            UIPinchGestureRecognizer *pinchGestureRecognizer = (UIPinchGestureRecognizer *)gestureRecognizer;
+            
+            if (pinchGestureRecognizer.scale < 1.0) {
+                // TODO: how to set completion block?
+                [self zoomOutWithCompletion:nil];
+            }
+        } else {
+            [self zoomOutWithCompletion:nil];
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -266,44 +255,135 @@
     return self.zoomedView;
 }
 
+////////////////////////////////////////////////////////////////////////
+#pragma mark -
+#pragma mark Rotation
+////////////////////////////////////////////////////////////////////////
+
+- (void)orientationWillChange:(NSNotification *)note {
+	UIInterfaceOrientation current = [[UIApplication sharedApplication] statusBarOrientation];
+	UIInterfaceOrientation orientation = [[[note userInfo] objectForKey: UIApplicationStatusBarOrientationUserInfoKey] integerValue];
+	
+   // if ( [self shouldAutorotateToInterfaceOrientation: orientation] == NO )
+   //	return;
+    
+	if ( current == orientation )
+		return;
+    
+	// direction and angle
+	CGFloat angle = 0.0;
+	switch (current) {
+		case UIInterfaceOrientationPortrait: {
+			switch (orientation) {
+				case UIInterfaceOrientationPortraitUpsideDown:
+					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
+					break;
+                    
+				case UIInterfaceOrientationLandscapeLeft:
+					angle = (CGFloat)(M_PI*-90.0)/180.0;
+					break;
+                    
+				case UIInterfaceOrientationLandscapeRight:
+					angle = (CGFloat)(M_PI*90.0)/180.0;
+					break;
+                    
+				default:
+					return;
+			}
+			break;
+		}
+            
+		case UIInterfaceOrientationPortraitUpsideDown: {
+			switch (orientation) {
+				case UIInterfaceOrientationPortrait:
+					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
+					break;
+                    
+				case UIInterfaceOrientationLandscapeLeft:
+					angle = (CGFloat)(M_PI*90.0)/180.0;
+					break;
+                    
+				case UIInterfaceOrientationLandscapeRight:
+					angle = (CGFloat)(M_PI*-90.0)/180.0;
+					break;
+                    
+				default:
+					return;
+			}
+			break;
+		}
+            
+		case UIInterfaceOrientationLandscapeLeft: {
+			switch (orientation) {
+				case UIInterfaceOrientationLandscapeRight:
+					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
+					break;
+                    
+				case UIInterfaceOrientationPortraitUpsideDown:
+					angle = (CGFloat)(M_PI*-90.0)/180.0;
+					break;
+                    
+				case UIInterfaceOrientationPortrait:
+					angle = (CGFloat)(M_PI*90.0)/180.0;
+					break;
+                    
+				default:
+					return;
+			}
+			break;
+		}
+            
+		case UIInterfaceOrientationLandscapeRight: {
+			switch (orientation) {
+				case UIInterfaceOrientationLandscapeLeft:
+					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
+					break;
+                    
+				case UIInterfaceOrientationPortrait:
+					angle = (CGFloat)(M_PI*-90.0)/180.0;
+					break;
+                    
+				case UIInterfaceOrientationPortraitUpsideDown:
+					angle = (CGFloat)(M_PI*90.0)/180.0;
+					break;
+                    
+				default:
+					return;
+			}
+			break;
+		}
+	}
+    
+	CGAffineTransform rotation = CGAffineTransformMakeRotation( angle );
+    
+    [UIView animateWithDuration:0.4 animations:^{
+        self.transform = CGAffineTransformConcat(rotation, self.transform);
+    }];
+}
+
+- (void)orientationDidChange:(NSNotification *)note {
+	// UIInterfaceOrientation orientation = [[[note userInfo] objectForKey: UIApplicationStatusBarOrientationUserInfoKey] integerValue];
+	
+    //if ([self shouldAutorotateToInterfaceOrientation:[[UIApplication sharedApplication] statusBarOrientation]] == NO)
+	//	return;
+    
+	self.frame = [[UIScreen mainScreen] applicationFrame];
+}
 
 ////////////////////////////////////////////////////////////////////////
 #pragma mark -
-#pragma mark Private Methods
+#pragma mark Singleton definitons
 ////////////////////////////////////////////////////////////////////////
 
-- (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
-    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
-        // is the targetView currently zoomed in?
-        if (self.zoomedView.superview == self.newSuperview) {
-            [self zoomOut];
-        }
-		// currently zoomed out -> zoom in
-		else {
-            [self zoomIn];
-        }
-    }
-}
+static MTZoomWindow *sharedMTZoomWindow = nil;
 
-- (void)saveProperties {
-    if ([self.zoomedView respondsToSelector:@selector(isScrollEnabled)]) {
-        id zoomedViewId = self.zoomedView;
-        self.scrollEnabledBefore = [zoomedViewId isScrollEnabled];
-    }
-}
-- (void)restoreProperties {
-	if ([self.zoomedView respondsToSelector:@selector(setScrollEnabled:)]) {
-		id targetId = self.zoomedView;
-		[targetId setScrollEnabled:self.scrollEnabledBefore];
-	}
-}
-
-- (void)enableZoomedinPropertyState {
-	// this especially is useful for MKMapView that are not enabled to
-	// scroll in their small frame -> when zoomed in you can scroll
-	if ([self.zoomedView respondsToSelector:@selector(setScrollEnabled:)]) {
-		[self.zoomedView performSelector:@selector(setScrollEnabled:) withObject:[NSNumber numberWithBool:YES]];
-	}
++ (MTZoomWindow *)sharedWindow {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedMTZoomWindow = [[self alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    });
+    
+	return sharedMTZoomWindow;
 }
 
 @end
