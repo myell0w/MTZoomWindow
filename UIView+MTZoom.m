@@ -39,7 +39,7 @@ static char delegateKey;
     
     if (!zoomWindow.zoomedIn) {
         UIView *superview = self.superview;
-        UIView *placeholderView = [[[UIView alloc] initWithFrame:self.frame] autorelease];
+        UIView *placeholderView = [[UIView alloc] initWithFrame:self.frame];
         
         // setup invisible copy of self
         placeholderView.autoresizingMask = self.autoresizingMask;

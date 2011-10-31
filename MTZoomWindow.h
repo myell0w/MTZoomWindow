@@ -26,7 +26,7 @@ typedef NSInteger MTZoomGestureMask;
 
 @interface MTZoomWindow : UIWindow <UIScrollViewDelegate>
 
-@property (nonatomic, retain) UIView *backgroundView;
+@property (nonatomic, strong) UIView *backgroundView;
 @property (nonatomic, assign) MTZoomGestureMask zoomGestures;
 @property (nonatomic, assign) UIViewAnimationOptions animationOptions;
 @property (nonatomic, assign) NSTimeInterval animationDuration;

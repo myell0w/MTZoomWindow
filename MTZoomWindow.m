@@ -18,10 +18,10 @@
 
 @interface MTZoomWindow ()
 
-@property (nonatomic, retain) UIView *zoomedView;
-@property (nonatomic, retain) UIScrollView *scrollView;
-@property (nonatomic, readonly) UIView *zoomSuperview;
-@property (nonatomic, retain) NSMutableSet *gestureRecognizers;
+@property (nonatomic, strong) UIView *zoomedView;
+@property (nonatomic, strong) UIScrollView *scrollView;
+@property (unsafe_unretained, nonatomic, readonly) UIView *zoomSuperview;
+@property (nonatomic, strong) NSMutableSet *gestureRecognizers;
 
 - (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer;
 
@@ -103,13 +103,6 @@
     [[NSNotificationCenter defaultCenter] removeObserver: self
                                                     name: UIApplicationDidChangeStatusBarOrientationNotification
                                                   object: nil];
-    
-    [backgroundView_ release], backgroundView_ = nil;
-    [zoomedView_ release], zoomedView_ = nil;
-    [scrollView_ release], scrollView_ = nil;
-    [gestureRecognizers_ release], gestureRecognizers_ = nil;
-    
-    [super dealloc];
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -213,13 +206,13 @@
         
         // create new gesture recognizers
         if (zoomGestures & MTZoomGestureTap) {
-            UITapGestureRecognizer *tapGestureRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                                    action:@selector(handleGesture:)] autorelease];
+            UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                                    action:@selector(handleGesture:)];
             [self.gestureRecognizers addObject:tapGestureRecognizer];
         }
         if (zoomGestures & MTZoomGestureDoubleTap) {
-            UITapGestureRecognizer *tapGestureRecognizer = [[[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                                    action:@selector(handleGesture:)] autorelease];
+            UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                                    action:@selector(handleGesture:)];
             tapGestureRecognizer.numberOfTapsRequired = 2;
             [self.gestureRecognizers addObject:tapGestureRecognizer];
         }
