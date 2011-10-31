@@ -1,7 +1,7 @@
 //
-//  MTZoomWindow.h
+//  MTZoomWindowDelegate.h
 //
-//  Created by Matthias Tretter on 8.3.2011.
+//  Created by Matthias Tretter on 31.10.2011.
 //  Copyright (c) 2009-2011 Matthias Tretter, @myell0w. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -12,31 +12,16 @@
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+@class MTZoomWindow;
 
-#import <Foundation/Foundation.h>
-#import "UIView+MTZoom.h"
+@protocol MTZoomWindowDelegate <NSObject>
 
-typedef enum {
-    MTZoomGestureTap        = 1,
-    MTZoomGestureDoubleTap  = 2,
-    MTZoomGesturePinch      = 4
-} MTZoomGesture;
+@optional
 
-typedef NSInteger MTZoomGestureMask;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow willZoomInView:(UIView *)view;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow didZoomInView:(UIView *)view;
 
-@interface MTZoomWindow : UIWindow <UIScrollViewDelegate>
-
-@property (nonatomic, retain) UIView *backgroundView;
-@property (nonatomic, assign) MTZoomGestureMask zoomGestures;
-@property (nonatomic, assign) UIViewAnimationOptions animationOptions;
-@property (nonatomic, assign) NSTimeInterval animationDuration;
-@property (nonatomic, assign) NSTimeInterval animationDelay;
-@property (nonatomic, assign) float maximumZoomScale;
-@property (nonatomic, readonly, getter = isZoomedIn) BOOL zoomedIn;
-
-+ (MTZoomWindow *)sharedWindow;
-
-- (void)zoomView:(UIView *)view toSize:(CGSize)size;
-- (void)zoomOut;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow willZoomOutView:(UIView *)view;
+- (void)zoomWindow:(MTZoomWindow *)zoomWindow didZoomOutView:(UIView *)view;
 
 @end

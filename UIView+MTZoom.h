@@ -14,8 +14,7 @@
 
 
 #import <UIKit/UIKit.h>
-
-typedef void (^mt_zoom_block)();
+#import "MTZoomWindowDelegate.h"
 
 @interface UIView (MTZoom)
 
@@ -23,13 +22,14 @@ typedef void (^mt_zoom_block)();
 @property (nonatomic, assign, getter = isWrappedInScrollviewWhenZoomed) BOOL wrapInScrollviewWhenZoomed;
 /** The size of the view when zoomed in */
 @property (nonatomic, assign) CGSize zoomedSize;
+/** The autoresizing-maks of the view when zoomed in */
+@property (nonatomic, assign) UIViewAutoresizing zoomedAutoresizingMask;
 /** the view that acts as a placeholder while self is zoomedIn */
 @property (nonatomic, retain) UIView *zoomPlaceholderView;
+/** The delegate for zooming */
+@property (nonatomic, assign) id<MTZoomWindowDelegate> zoomDelegate;
 
 - (void)zoomIn;
 - (void)zoomOut;
-
-- (void)zoomInWithPreparation:(mt_zoom_block)preparationBlock completion:(mt_zoom_block)completionBlock;
-- (void)zoomOutWithPreparation:(mt_zoom_block)preparationBlock completion:(mt_zoom_block)completionBlock;
 
 @end

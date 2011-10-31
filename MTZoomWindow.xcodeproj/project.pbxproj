@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		392B15A81326592500BF254A /* MTZoomWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 392B15A61326592500BF254A /* MTZoomWindow.h */; };
 		392B15A91326592500BF254A /* MTZoomWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 392B15A71326592500BF254A /* MTZoomWindow.m */; };
+		9B0D3741145F3B0E00DB01C5 /* UIView+MTZoom.h in Headers */ = {isa = PBXBuildFile; fileRef = 9B0D373F145F3B0E00DB01C5 /* UIView+MTZoom.h */; };
+		9B0D3742145F3B0E00DB01C5 /* UIView+MTZoom.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B0D3740145F3B0E00DB01C5 /* UIView+MTZoom.m */; };
+		9B0D3746145F3BC400DB01C5 /* MTZoomWindowDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 9B0D3745145F3BC400DB01C5 /* MTZoomWindowDelegate.h */; };
 		AA747D9F0F9514B9006C5449 /* MTZoomWindow_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = AA747D9E0F9514B9006C5449 /* MTZoomWindow_Prefix.pch */; };
 		AACBBE4A0F95108600F1A2B1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AACBBE490F95108600F1A2B1 /* Foundation.framework */; };
 /* End PBXBuildFile section */
@@ -16,6 +19,10 @@
 /* Begin PBXFileReference section */
 		392B15A61326592500BF254A /* MTZoomWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTZoomWindow.h; sourceTree = "<group>"; };
 		392B15A71326592500BF254A /* MTZoomWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTZoomWindow.m; sourceTree = "<group>"; };
+		9B0D373F145F3B0E00DB01C5 /* UIView+MTZoom.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIView+MTZoom.h"; sourceTree = "<group>"; };
+		9B0D3740145F3B0E00DB01C5 /* UIView+MTZoom.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+MTZoom.m"; sourceTree = "<group>"; };
+		9B0D3744145F3B1400DB01C5 /* Readme.mdown */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Readme.mdown; sourceTree = "<group>"; };
+		9B0D3745145F3BC400DB01C5 /* MTZoomWindowDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTZoomWindowDelegate.h; sourceTree = "<group>"; };
 		AA747D9E0F9514B9006C5449 /* MTZoomWindow_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTZoomWindow_Prefix.pch; sourceTree = SOURCE_ROOT; };
 		AACBBE490F95108600F1A2B1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		D2AAC07E0554694100DB518D /* libMTZoomWindow.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libMTZoomWindow.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,6 +72,9 @@
 			children = (
 				392B15A61326592500BF254A /* MTZoomWindow.h */,
 				392B15A71326592500BF254A /* MTZoomWindow.m */,
+				9B0D3745145F3BC400DB01C5 /* MTZoomWindowDelegate.h */,
+				9B0D373F145F3B0E00DB01C5 /* UIView+MTZoom.h */,
+				9B0D3740145F3B0E00DB01C5 /* UIView+MTZoom.m */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -72,6 +82,7 @@
 		32C88DFF0371C24200C91783 /* Other Sources */ = {
 			isa = PBXGroup;
 			children = (
+				9B0D3744145F3B1400DB01C5 /* Readme.mdown */,
 				AA747D9E0F9514B9006C5449 /* MTZoomWindow_Prefix.pch */,
 			);
 			name = "Other Sources";
@@ -86,6 +97,8 @@
 			files = (
 				AA747D9F0F9514B9006C5449 /* MTZoomWindow_Prefix.pch in Headers */,
 				392B15A81326592500BF254A /* MTZoomWindow.h in Headers */,
+				9B0D3741145F3B0E00DB01C5 /* UIView+MTZoom.h in Headers */,
+				9B0D3746145F3BC400DB01C5 /* MTZoomWindowDelegate.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +156,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				392B15A91326592500BF254A /* MTZoomWindow.m in Sources */,
+				9B0D3742145F3B0E00DB01C5 /* UIView+MTZoom.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
