@@ -170,7 +170,7 @@
                              // hide window
                              self.hidden = YES;
                              
-                             id<MTZoomWindowDelegate> delegate = self.zoomDelegate;
+                             id<MTZoomWindowDelegate> delegate = self.zoomedView.zoomDelegate;
                              
                              if ([delegate respondsToSelector:@selector(zoomWindow:didZoomOutView:)]) {
                                  [delegate zoomWindow:self didZoomOutView:self.zoomedView];
@@ -226,7 +226,7 @@
 
 - (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
     if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
-        [self zoomOut];
+        [self.zoomedView zoomOut];
     }
 }
 
@@ -242,7 +242,7 @@
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView {
     if (self.zoomGestures & MTZoomGesturePinch) {
         if (!scrollView.zooming && scrollView.zoomBouncing && scrollView.zoomScale <= 1.f) {
-            [self zoomOut];
+            [self.zoomedView zoomOut];
         }
     }
 }
