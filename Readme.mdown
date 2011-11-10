@@ -13,7 +13,7 @@ You can use MTZoomWindow like this:
 	// specify size of the UIView when it is zoomed in
 	viewToZoom.zoomedSize = CGSizeMake(300,460);
     viewToZoom.zoomedAutoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    viewToZoom.wrapInScrollViewWhenZoomed = YES;
+    viewToZoom.wrapInScrollviewWhenZoomed = YES;
 
     // find this awesome shortcut for UITapGestureRecognizer in @zwaldowski's BlocksKit
     [viewToZoom whenTapped:^{
