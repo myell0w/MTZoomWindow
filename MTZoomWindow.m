@@ -200,6 +200,7 @@
         zoomGestures_ = zoomGestures;
         
         // remove old gesture recognizers
+        [self.gestureRecognizers removeAllObjects];
         for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
             [self.backgroundView removeGestureRecognizer:gestureRecognizer];
         }
