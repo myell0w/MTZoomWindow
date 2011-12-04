@@ -28,6 +28,19 @@ Adding MTZoomWindow to your project
 2. import "MTZoomWindow.h" everywhere where you want to use it
 3. There is no step 3 :)
 
+Known Issues
+------------------
+
+When your App supports landscape orientation you have to create MTZoomWindow in your AppDelegate:
+
+    - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+        // ...
+        // create ZoomWindow to listen for orientation changes
+        [MTZoomWindow sharedWindow];
+    
+        return YES;
+    }
+
 
 Screenshots
 ------------------------
