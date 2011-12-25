@@ -32,6 +32,7 @@ typedef NSInteger MTZoomGestureMask;
 @property (nonatomic, assign) NSTimeInterval animationDuration;
 @property (nonatomic, assign) NSTimeInterval animationDelay;
 @property (nonatomic, assign) float maximumZoomScale;
+@property (nonatomic, strong, readonly) UIView *zoomedView;
 @property (nonatomic, readonly, getter = isZoomedIn) BOOL zoomedIn;
 
 + (MTZoomWindow *)sharedWindow;

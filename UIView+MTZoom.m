@@ -30,8 +30,7 @@ static char delegateKey;
 @implementation UIView (MTZoom)
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Zooming
+#pragma mark - Zooming
 ////////////////////////////////////////////////////////////////////////
 
 - (void)zoomIn {
@@ -62,9 +61,16 @@ static char delegateKey;
     [zoomWindow zoomOut];
 }
 
+- (void)toggleZoomState {
+    if (self.zoomedIn) {
+        [self zoomOut];
+    } else {
+        [self zoomIn];
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Properties
+#pragma mark - Properties
 ////////////////////////////////////////////////////////////////////////
 
 - (void)setWrapInScrollviewWhenZoomed:(BOOL)wrapInScrollviewWhenZoomed {
@@ -108,6 +114,10 @@ static char delegateKey;
     return objc_getAssociatedObject(self, &delegateKey);
 }
 
+- (BOOL)isZoomedIn {
+    return [MTZoomWindow sharedWindow].zoomedIn && [MTZoomWindow sharedWindow].zoomedView == self;
+}
+
 - (void)setZoomPlaceholderView:(UIView *)zoomPlaceholderView {
     objc_setAssociatedObject(self, &placeholderKey, zoomPlaceholderView, OBJC_ASSOCIATION_RETAIN);
 }
@@ -117,8 +127,7 @@ static char delegateKey;
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Delegate Calls
+#pragma mark - Delegate Calls
 ////////////////////////////////////////////////////////////////////////
 
 - (void)mt_callDelegateWillZoomIn {

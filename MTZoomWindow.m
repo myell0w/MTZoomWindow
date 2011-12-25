@@ -18,7 +18,7 @@
 
 @interface MTZoomWindow ()
 
-@property (nonatomic, strong) UIView *zoomedView;
+@property (nonatomic, strong, readwrite) UIView *zoomedView;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (unsafe_unretained, nonatomic, readonly) UIView *zoomSuperview;
 @property (nonatomic, strong) NSMutableSet *gestureRecognizers;
@@ -45,8 +45,7 @@
 @synthesize maximumZoomScale = maximumZoomScale_;
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Lifecycle
+#pragma mark - Lifecycle
 ////////////////////////////////////////////////////////////////////////
 
 - (id)initWithFrame:(CGRect)frame {
@@ -106,8 +105,7 @@
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark MTZoomWindow
+#pragma mark - MTZoomWindow
 ////////////////////////////////////////////////////////////////////////
 
 - (void)zoomView:(UIView *)view toSize:(CGSize)size {
@@ -232,8 +230,7 @@
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark UIScrollViewDelegate
+#pragma mark - UIScrollViewDelegate
 ////////////////////////////////////////////////////////////////////////
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
@@ -249,8 +246,7 @@
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Rotation
+#pragma mark - Rotation
 ////////////////////////////////////////////////////////////////////////
 
 - (void)setupForOrientation:(UIInterfaceOrientation)orientation forceLayout:(BOOL)forceLayout {
@@ -371,8 +367,7 @@
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Singleton definitons
+#pragma mark - Singleton definitons
 ////////////////////////////////////////////////////////////////////////
 
 static MTZoomWindow *sharedMTZoomWindow = nil;

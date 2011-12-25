@@ -28,8 +28,11 @@
 @property (nonatomic, retain) UIView *zoomPlaceholderView;
 /** The delegate for zooming */
 @property (nonatomic, assign) id<MTZoomWindowDelegate> zoomDelegate;
+/** Flag that indicates if the view is currently zoomed in */
+@property (nonatomic, readonly, getter = isZoomedIn) BOOL zoomedIn; 
 
 - (void)zoomIn;
 - (void)zoomOut;
+- (void)toggleZoomState;
 
 @end
