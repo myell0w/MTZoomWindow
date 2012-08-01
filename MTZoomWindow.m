@@ -17,35 +17,19 @@
 #import "MTZoomWindow.h"
 #import <QuartzCore/QuartzCore.h>
 
+
 @interface MTZoomWindow ()
 
 @property (nonatomic, strong, readwrite) UIView *zoomedView;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIView *zoomContentView;
 @property (unsafe_unretained, nonatomic, readonly) UIView *zoomSuperview;
-@property (nonatomic, strong) NSMutableSet *gestureRecognizers;
-
-- (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer;
-
-- (void)orientationWillChange:(NSNotification *)note;
-- (void)orientationDidChange:(NSNotification *)note;
-- (void)setupForOrientation:(UIInterfaceOrientation)orientation forceLayout:(BOOL)forceLayout;
+@property (nonatomic, strong) NSMutableSet *zoomGestureRecognizers;
 
 @end
 
 
 @implementation MTZoomWindow
-
-@synthesize backgroundView = backgroundView_;
-@synthesize zoomGestures = zoomGestures_;
-@synthesize animationOptions = animationOptions_;
-@synthesize animationDuration = animationDuration_;
-@synthesize animationDelay = animationDelay_;
-@synthesize scrollView = scrollView_;
-@synthesize zoomContentView = zoomContentView_;
-@synthesize zoomedView = zoomedView_;
-@synthesize gestureRecognizers = gestureRecognizers_;
-@synthesize maximumZoomScale = maximumZoomScale_;
 
 ////////////////////////////////////////////////////////////////////////
 #pragma mark - Lifecycle
@@ -59,34 +43,35 @@
         self.backgroundColor = [UIColor clearColor];
 
         // setup black backgroundView
-        backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
-        backgroundView_.backgroundColor = [UIColor blackColor];
-        backgroundView_.alpha = 0.f;
-        backgroundView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self addSubview:backgroundView_];
+        _backgroundView = [[UIView alloc] initWithFrame:self.frame];
+        _backgroundView.backgroundColor = [UIColor blackColor];
+        _backgroundView.alpha = 0.f;
+        _backgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:_backgroundView];
 
         // setup scrollview
-        maximumZoomScale_ = 2.f;
-        scrollView_ = [[UIScrollView alloc] initWithFrame:self.frame];
-        scrollView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        scrollView_.maximumZoomScale = maximumZoomScale_;
-        scrollView_.showsVerticalScrollIndicator = NO;
-        scrollView_.showsHorizontalScrollIndicator = NO;
-        scrollView_.indicatorStyle = UIScrollViewIndicatorStyleWhite;
-        scrollView_.delegate = self;
-        scrollView_.hidden = YES;
-        [self addSubview:scrollView_];
+        _maximumZoomScale = 2.f;
+        _scrollView = [[UIScrollView alloc] initWithFrame:self.frame];
+        _scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _scrollView.maximumZoomScale = _maximumZoomScale;
+        _scrollView.showsVerticalScrollIndicator = NO;
+        _scrollView.showsHorizontalScrollIndicator = NO;
+        _scrollView.indicatorStyle = UIScrollViewIndicatorStyleWhite;
+        _scrollView.delegate = self;
+        _scrollView.hidden = YES;
+        [self addSubview:_scrollView];
 
-        zoomContentView_ = [[UIView alloc] initWithFrame:self.scrollView.bounds];
-        zoomContentView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [scrollView_ addSubview:zoomContentView_];
+        _zoomContentView = [[UIView alloc] initWithFrame:self.scrollView.bounds];
+        _zoomContentView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [_scrollView addSubview:_zoomContentView];
 
         // setup animation properties
-        animationOptions_ = UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction;
-        animationDuration_ = 0.4;
-        animationDelay_ = 0.;
+        _animationOptions = UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction;
+        _animationDuration = 0.4;
+        _animationDelay = 0.;
 
-        gestureRecognizers_ = [[NSMutableSet alloc] init];
+        _zoomGestureRecognizers = [[NSMutableSet alloc] init];
+        // using setter on purpose here
         self.zoomGestures = MTZoomGestureTap | MTZoomGesturePinch;
 
         // register for orientation change notification
@@ -201,38 +186,32 @@
 }
 
 - (void)setZoomGestures:(NSInteger)zoomGestures {
-    if (zoomGestures != zoomGestures_) {
-        zoomGestures_ = zoomGestures;
+    if (zoomGestures != _zoomGestures) {
+        _zoomGestures = zoomGestures;
 
         // remove old gesture recognizers
-        [self.gestureRecognizers removeAllObjects];
-        for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
+        for (UIGestureRecognizer *gestureRecognizer in self.zoomGestureRecognizers) {
             [self.backgroundView removeGestureRecognizer:gestureRecognizer];
         }
+        [self.zoomGestureRecognizers removeAllObjects];
 
         // create new gesture recognizers
         if (zoomGestures & MTZoomGestureTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                                    action:@selector(handleGesture:)];
-            [self.gestureRecognizers addObject:tapGestureRecognizer];
+            [self.zoomGestureRecognizers addObject:tapGestureRecognizer];
         }
         if (zoomGestures & MTZoomGestureDoubleTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                                    action:@selector(handleGesture:)];
             tapGestureRecognizer.numberOfTapsRequired = 2;
-            [self.gestureRecognizers addObject:tapGestureRecognizer];
+            [self.zoomGestureRecognizers addObject:tapGestureRecognizer];
         }
 
         // add new gesture recognizers to views
-        for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
+        for (UIGestureRecognizer *gestureRecognizer in self.zoomGestureRecognizers) {
             [self.backgroundView addGestureRecognizer:gestureRecognizer];
         }
-    }
-}
-
-- (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
-    if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
-        [self.zoomedView zoomOut];
     }
 }
 
@@ -253,8 +232,14 @@
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark - Rotation
+#pragma mark - Private
 ////////////////////////////////////////////////////////////////////////
+
+- (void)handleGesture:(UIGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state == UIGestureRecognizerStateRecognized) {
+        [self.zoomedView zoomOut];
+    }
+}
 
 - (void)setupForOrientation:(UIInterfaceOrientation)orientation forceLayout:(BOOL)forceLayout {
     UIInterfaceOrientation current = [[UIApplication sharedApplication] statusBarOrientation];

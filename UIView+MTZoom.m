@@ -10,7 +10,9 @@
 #import "MTZoomWindow.h"
 #import <objc/runtime.h>
 
+
 #define kMTDefaultZoomedAutoresizingMask    UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight
+
 
 static char wrapKey;
 static char sizeKey;
@@ -18,14 +20,6 @@ static char autoresizingKey;
 static char placeholderKey;
 static char delegateKey;
 
-@interface UIView ()
-
-- (void)mt_callDelegateWillZoomIn;
-- (void)mt_callDelegateDidZoomIn;
-- (void)mt_callDelegateWillZoomOut;
-- (void)mt_callDelegateDidZoomOut;
-
-@end
 
 @implementation UIView (MTZoom)
 
@@ -74,7 +68,7 @@ static char delegateKey;
 ////////////////////////////////////////////////////////////////////////
 
 - (void)setWrapInScrollviewWhenZoomed:(BOOL)wrapInScrollviewWhenZoomed {
-    objc_setAssociatedObject(self, &wrapKey, [NSNumber numberWithBool:wrapInScrollviewWhenZoomed], OBJC_ASSOCIATION_RETAIN);
+    objc_setAssociatedObject(self, &wrapKey, @(wrapInScrollviewWhenZoomed), OBJC_ASSOCIATION_RETAIN);
 }
 
 - (BOOL)isWrappedInScrollviewWhenZoomed {
@@ -93,7 +87,7 @@ static char delegateKey;
 }
 
 - (void)setZoomedAutoresizingMask:(UIViewAutoresizing)zoomedAutoresizingMask {
-    objc_setAssociatedObject(self, &autoresizingKey, [NSNumber numberWithInt:zoomedAutoresizingMask], OBJC_ASSOCIATION_RETAIN);
+    objc_setAssociatedObject(self, &autoresizingKey, @(zoomedAutoresizingMask), OBJC_ASSOCIATION_RETAIN);
 }
 
 - (UIViewAutoresizing)zoomedAutoresizingMask {
@@ -127,7 +121,7 @@ static char delegateKey;
 }
 
 ////////////////////////////////////////////////////////////////////////
-#pragma mark - Delegate Calls
+#pragma mark - Private Delegate Calls
 ////////////////////////////////////////////////////////////////////////
 
 - (void)mt_callDelegateWillZoomIn {

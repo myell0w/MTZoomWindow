@@ -17,12 +17,13 @@
 #import "UIView+MTZoom.h"
 
 typedef enum {
-    MTZoomGestureTap        = 1,
-    MTZoomGestureDoubleTap  = 2,
-    MTZoomGesturePinch      = 4
+    MTZoomGestureTap        = 1 << 0,
+    MTZoomGestureDoubleTap  = 1 << 1,
+    MTZoomGesturePinch      = 1 << 2
 } MTZoomGesture;
 
 typedef NSInteger MTZoomGestureMask;
+
 
 @interface MTZoomWindow : UIWindow <UIScrollViewDelegate>
 
@@ -34,6 +35,7 @@ typedef NSInteger MTZoomGestureMask;
 @property (nonatomic, assign) float maximumZoomScale;
 @property (nonatomic, strong, readonly) UIView *zoomedView;
 @property (nonatomic, readonly, getter = isZoomedIn) BOOL zoomedIn;
+
 
 + (MTZoomWindow *)sharedWindow;
 
