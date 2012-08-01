@@ -15,11 +15,13 @@
 // Rotation code based on Alan Quatermains AQSelfRotatingViewController
 
 #import "MTZoomWindow.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface MTZoomWindow ()
 
 @property (nonatomic, strong, readwrite) UIView *zoomedView;
 @property (nonatomic, strong) UIScrollView *scrollView;
+@property (nonatomic, strong) UIView *zoomContentView;
 @property (unsafe_unretained, nonatomic, readonly) UIView *zoomSuperview;
 @property (nonatomic, strong) NSMutableSet *gestureRecognizers;
 
@@ -40,6 +42,7 @@
 @synthesize animationDuration = animationDuration_;
 @synthesize animationDelay = animationDelay_;
 @synthesize scrollView = scrollView_;
+@synthesize zoomContentView = zoomContentView_;
 @synthesize zoomedView = zoomedView_;
 @synthesize gestureRecognizers = gestureRecognizers_;
 @synthesize maximumZoomScale = maximumZoomScale_;
@@ -51,17 +54,17 @@
 - (id)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
         // setup window
-        self.windowLevel = UIWindowLevelStatusBar + 2.0f;
+        self.windowLevel = UIWindowLevelStatusBar + 2.f;
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.backgroundColor = [UIColor clearColor];
-        
+
         // setup black backgroundView
         backgroundView_ = [[UIView alloc] initWithFrame:self.frame];
         backgroundView_.backgroundColor = [UIColor blackColor];
-        backgroundView_.alpha = 0.0f;
+        backgroundView_.alpha = 0.f;
         backgroundView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self addSubview:backgroundView_];
-        
+
         // setup scrollview
         maximumZoomScale_ = 2.f;
         scrollView_ = [[UIScrollView alloc] initWithFrame:self.frame];
@@ -69,39 +72,44 @@
         scrollView_.maximumZoomScale = maximumZoomScale_;
         scrollView_.showsVerticalScrollIndicator = NO;
         scrollView_.showsHorizontalScrollIndicator = NO;
+        scrollView_.indicatorStyle = UIScrollViewIndicatorStyleWhite;
         scrollView_.delegate = self;
         scrollView_.hidden = YES;
         [self addSubview:scrollView_];
-        
+
+        zoomContentView_ = [[UIView alloc] initWithFrame:self.scrollView.bounds];
+        zoomContentView_.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [scrollView_ addSubview:zoomContentView_];
+
         // setup animation properties
         animationOptions_ = UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction;
         animationDuration_ = 0.4;
-        animationDelay_ = 0.0;
-        
+        animationDelay_ = 0.;
+
         gestureRecognizers_ = [[NSMutableSet alloc] init];
         self.zoomGestures = MTZoomGestureTap | MTZoomGesturePinch;
-        
+
         // register for orientation change notification
-        [[NSNotificationCenter defaultCenter] addObserver: self
-                                                 selector: @selector(orientationWillChange:)
-                                                     name: UIApplicationWillChangeStatusBarOrientationNotification
-                                                   object: nil];
-        [[NSNotificationCenter defaultCenter] addObserver: self
-                                                 selector: @selector(orientationDidChange:)
-                                                     name: UIApplicationDidChangeStatusBarOrientationNotification
-                                                   object: nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(orientationWillChange:)
+                                                     name:UIApplicationWillChangeStatusBarOrientationNotification
+                                                   object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(orientationDidChange:)
+                                                     name:UIApplicationDidChangeStatusBarOrientationNotification
+                                                   object:nil];
     }
-    
+
     return self;
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver: self
-                                                    name: UIApplicationWillChangeStatusBarOrientationNotification
-                                                  object: nil];
-    [[NSNotificationCenter defaultCenter] removeObserver: self
-                                                    name: UIApplicationDidChangeStatusBarOrientationNotification
-                                                  object: nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIApplicationWillChangeStatusBarOrientationNotification
+                                                  object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIApplicationDidChangeStatusBarOrientationNotification
+                                                  object:nil];
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -110,48 +118,45 @@
 
 - (void)zoomView:(UIView *)view toSize:(CGSize)size {
     self.zoomedView = view;
-    
+
     // save frames before zoom operation
 	CGRect originalFrameInWindow = [view convertRect:view.bounds toView:self];
-    
+
     // pre-setup
     self.backgroundView.alpha = 0.f;
     self.hidden = NO;
-    
+
     // the zoomedView now has another superview and therefore we must change it's frame
 	// to still visually appear on the same place like before to the user
     [self.zoomSuperview addSubview:self.zoomedView];
     self.zoomedView.frame = originalFrameInWindow;
     self.zoomedView.autoresizingMask = self.zoomedView.zoomedAutoresizingMask;
-    
+
     [UIView animateWithDuration:self.animationDuration
                           delay:self.animationDelay
-                        options:self.animationOptions 
+                        options:self.animationOptions
                      animations:^{
                          self.backgroundView.alpha = 1.f;
                          self.zoomedView.frame = CGRectMake((self.bounds.size.width-size.width)/2.f, (self.bounds.size.height-size.height)/2.f,
                                                             size.width, size.height);
                      } completion:^(BOOL finished) {
                          id<MTZoomWindowDelegate> delegate = view.zoomDelegate;
-                         
+
                          if ([delegate respondsToSelector:@selector(zoomWindow:didZoomInView:)]) {
                              [delegate zoomWindow:self didZoomInView:view];
                          }
+
+                         [self.scrollView flashScrollIndicators];
                      }];
 }
 
 - (void)zoomOut {
     if (self.zoomedIn) {
         CGRect destinationFrameInWindow = [self.zoomedView.zoomPlaceholderView convertRect:self.zoomedView.zoomPlaceholderView.bounds toView:self];
-        UIView *zoomSuperview = self.zoomSuperview;
-        
-        // if superview is a scrollView, reset zoom-scale
-        if ([zoomSuperview respondsToSelector:@selector(setZoomScale:animated:)]) {
-            [zoomSuperview performSelector:@selector(setZoomScale:animated:)
-                                withObject:[NSNumber numberWithFloat:1.f] 
-                                withObject:[NSNumber numberWithBool:YES]];
-        }
-        
+
+        // reset zoom-scale of scrollView
+        [self.scrollView setZoomScale:1.f animated:YES];
+
         [UIView animateWithDuration:self.animationDuration
                               delay:self.animationDelay
                             options:self.animationOptions | UIViewAnimationOptionBeginFromCurrentState
@@ -167,22 +172,24 @@
                              self.zoomedView.zoomPlaceholderView = nil;
                              // hide window
                              self.hidden = YES;
-                             
+
                              id<MTZoomWindowDelegate> delegate = self.zoomedView.zoomDelegate;
-                             
+
                              if ([delegate respondsToSelector:@selector(zoomWindow:didZoomOutView:)]) {
                                  [delegate zoomWindow:self didZoomOutView:self.zoomedView];
                              }
-                             
+
                              self.zoomedView = nil;
                          }];
     }
 }
 
+
+
 - (UIView *)zoomSuperview {
     if (self.zoomedView.wrapInScrollviewWhenZoomed) {
         self.scrollView.hidden = NO;
-        return self.scrollView;
+        return self.zoomContentView;
     } else {
         self.scrollView.hidden = YES;
         return self;
@@ -196,26 +203,26 @@
 - (void)setZoomGestures:(NSInteger)zoomGestures {
     if (zoomGestures != zoomGestures_) {
         zoomGestures_ = zoomGestures;
-        
+
         // remove old gesture recognizers
         [self.gestureRecognizers removeAllObjects];
         for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
             [self.backgroundView removeGestureRecognizer:gestureRecognizer];
         }
-        
+
         // create new gesture recognizers
         if (zoomGestures & MTZoomGestureTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                                    action:@selector(handleGesture:)];
+                                                                                                   action:@selector(handleGesture:)];
             [self.gestureRecognizers addObject:tapGestureRecognizer];
         }
         if (zoomGestures & MTZoomGestureDoubleTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                                    action:@selector(handleGesture:)];
+                                                                                                   action:@selector(handleGesture:)];
             tapGestureRecognizer.numberOfTapsRequired = 2;
             [self.gestureRecognizers addObject:tapGestureRecognizer];
         }
-        
+
         // add new gesture recognizers to views
         for (UIGestureRecognizer *gestureRecognizer in self.gestureRecognizers) {
             [self.backgroundView addGestureRecognizer:gestureRecognizer];
@@ -234,7 +241,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
-    return self.zoomedView;
+    return self.zoomContentView;
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView {
@@ -251,16 +258,16 @@
 
 - (void)setupForOrientation:(UIInterfaceOrientation)orientation forceLayout:(BOOL)forceLayout {
     UIInterfaceOrientation current = [[UIApplication sharedApplication] statusBarOrientation];
-    
+
     if (!forceLayout) {
         // if ( [self shouldAutorotateToInterfaceOrientation: orientation] == NO )
         //	return;
-        
+
         if (current == orientation) {
             return;
         }
     }
-    
+
 	// direction and angle
 	CGFloat angle = 0.0;
 	switch (current) {
@@ -269,84 +276,84 @@
 				case UIInterfaceOrientationPortraitUpsideDown:
 					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
 					break;
-                    
+
 				case UIInterfaceOrientationLandscapeLeft:
 					angle = (CGFloat)(M_PI*-90.0)/180.0;
 					break;
-                    
+
 				case UIInterfaceOrientationLandscapeRight:
 					angle = (CGFloat)(M_PI*90.0)/180.0;
 					break;
-                    
+
 				default:
 					return;
 			}
 			break;
 		}
-            
+
 		case UIInterfaceOrientationPortraitUpsideDown: {
 			switch (orientation) {
 				case UIInterfaceOrientationPortrait:
 					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
 					break;
-                    
+
 				case UIInterfaceOrientationLandscapeLeft:
 					angle = (CGFloat)(M_PI*90.0)/180.0;
 					break;
-                    
+
 				case UIInterfaceOrientationLandscapeRight:
 					angle = (CGFloat)(M_PI*-90.0)/180.0;
 					break;
-                    
+
 				default:
 					return;
 			}
 			break;
 		}
-            
+
 		case UIInterfaceOrientationLandscapeLeft: {
 			switch (orientation) {
 				case UIInterfaceOrientationLandscapeRight:
 					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
 					break;
-                    
+
 				case UIInterfaceOrientationPortraitUpsideDown:
 					angle = (CGFloat)(M_PI*-90.0)/180.0;
 					break;
-                    
+
 				case UIInterfaceOrientationPortrait:
 					angle = (CGFloat)(M_PI*90.0)/180.0;
 					break;
-                    
+
 				default:
 					return;
 			}
 			break;
 		}
-            
+
 		case UIInterfaceOrientationLandscapeRight: {
 			switch (orientation) {
 				case UIInterfaceOrientationLandscapeLeft:
 					angle = (CGFloat)M_PI;	// 180.0*M_PI/180.0 == M_PI
 					break;
-                    
+
 				case UIInterfaceOrientationPortrait:
 					angle = (CGFloat)(M_PI*-90.0)/180.0;
 					break;
-                    
+
 				case UIInterfaceOrientationPortraitUpsideDown:
 					angle = (CGFloat)(M_PI*90.0)/180.0;
 					break;
-                    
+
 				default:
 					return;
 			}
 			break;
 		}
 	}
-    
+
 	CGAffineTransform rotation = CGAffineTransformMakeRotation(angle);
-    
+
     [UIView animateWithDuration:0.4 animations:^{
         self.transform = CGAffineTransformConcat(rotation, self.transform);
     }];
@@ -354,16 +361,18 @@
 
 - (void)orientationWillChange:(NSNotification *)note {
 	UIInterfaceOrientation orientation = [[[note userInfo] objectForKey: UIApplicationStatusBarOrientationUserInfoKey] integerValue];
+
+    [self.scrollView setZoomScale:1.f animated:YES];
     [self setupForOrientation:orientation forceLayout:NO];
 }
 
 - (void)orientationDidChange:(NSNotification *)note {
 	// UIInterfaceOrientation orientation = [[[note userInfo] objectForKey: UIApplicationStatusBarOrientationUserInfoKey] integerValue];
-	
+
     //if ([self shouldAutorotateToInterfaceOrientation:[[UIApplication sharedApplication] statusBarOrientation]] == NO)
 	//	return;
     
-	self.frame = [[UIScreen mainScreen] bounds];
+	self.frame = [UIScreen mainScreen].bounds;
 }
 
 ////////////////////////////////////////////////////////////////////////
