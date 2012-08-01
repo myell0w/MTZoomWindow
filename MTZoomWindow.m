@@ -60,6 +60,8 @@
         _scrollView.indicatorStyle = UIScrollViewIndicatorStyleWhite;
         _scrollView.delegate = self;
         _scrollView.hidden = YES;
+        _scrollView.contentSize = CGSizeMake(1.f,1.f);
+        _scrollView.scrollEnabled = NO;
         [self addSubview:_scrollView];
 
         _zoomContentView = [[UIView alloc] initWithFrame:self.scrollView.bounds];
@@ -226,6 +228,13 @@
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView {
+    // if we zoomed in we want to allow panning around
+    if (scrollView.zoomScale > 1.f) {
+        scrollView.scrollEnabled = YES;
+    } else {
+        scrollView.scrollEnabled = NO;
+    }
+
     if (self.zoomGestures & MTZoomGesturePinch) {
         if (!scrollView.zooming && scrollView.zoomBouncing && scrollView.zoomScale <= 1.f) {
             [self.zoomedView zoomOut];
