@@ -18,13 +18,14 @@
 #import <QuartzCore/QuartzCore.h>
 
 
-@interface MTZoomWindow ()
+@interface MTZoomWindow () {
+    NSMutableSet *_zoomGestureRecognizers;
+}
 
 @property (nonatomic, strong, readwrite) UIView *zoomedView;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIView *zoomContentView;
 @property (unsafe_unretained, nonatomic, readonly) UIView *zoomSuperview;
-@property (nonatomic, strong) NSMutableSet *zoomGestureRecognizers;
 
 @end
 
@@ -63,6 +64,7 @@
 
         _zoomContentView = [[UIView alloc] initWithFrame:self.scrollView.bounds];
         _zoomContentView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _zoomContentView.userInteractionEnabled = NO;
         [_scrollView addSubview:_zoomContentView];
 
         // setup animation properties
@@ -70,7 +72,7 @@
         _animationDuration = 0.4;
         _animationDelay = 0.;
 
-        _zoomGestureRecognizers = [[NSMutableSet alloc] init];
+        _zoomGestureRecognizers = [NSMutableSet set];
         // using setter on purpose here
         self.zoomGestures = MTZoomGestureTap | MTZoomGesturePinch;
 
@@ -185,32 +187,32 @@
     return !self.hidden && self.zoomedView != nil;
 }
 
-- (void)setZoomGestures:(NSInteger)zoomGestures {
+- (void)setZoomGestures:(MTZoomGestureMask)zoomGestures {
     if (zoomGestures != _zoomGestures) {
         _zoomGestures = zoomGestures;
 
         // remove old gesture recognizers
-        for (UIGestureRecognizer *gestureRecognizer in self.zoomGestureRecognizers) {
-            [self.backgroundView removeGestureRecognizer:gestureRecognizer];
+        for (UIGestureRecognizer *gestureRecognizer in _zoomGestureRecognizers) {
+            [self removeGestureRecognizer:gestureRecognizer];
         }
-        [self.zoomGestureRecognizers removeAllObjects];
+        [_zoomGestureRecognizers removeAllObjects];
 
         // create new gesture recognizers
         if (zoomGestures & MTZoomGestureTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                                    action:@selector(handleGesture:)];
-            [self.zoomGestureRecognizers addObject:tapGestureRecognizer];
+            [_zoomGestureRecognizers addObject:tapGestureRecognizer];
         }
         if (zoomGestures & MTZoomGestureDoubleTap) {
             UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                                    action:@selector(handleGesture:)];
             tapGestureRecognizer.numberOfTapsRequired = 2;
-            [self.zoomGestureRecognizers addObject:tapGestureRecognizer];
+            [_zoomGestureRecognizers addObject:tapGestureRecognizer];
         }
 
         // add new gesture recognizers to views
-        for (UIGestureRecognizer *gestureRecognizer in self.zoomGestureRecognizers) {
-            [self.backgroundView addGestureRecognizer:gestureRecognizer];
+        for (UIGestureRecognizer *gestureRecognizer in _zoomGestureRecognizers) {
+            [self addGestureRecognizer:gestureRecognizer];
         }
     }
 }
