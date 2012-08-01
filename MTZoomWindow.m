@@ -162,7 +162,7 @@
                              // reset zoomed view to original position
                              self.zoomedView.frame = self.zoomedView.zoomPlaceholderView.frame;
                              self.zoomedView.autoresizingMask = self.zoomedView.zoomPlaceholderView.autoresizingMask;
-                             [self.zoomedView.zoomPlaceholderView.superview addSubview:self.zoomedView];
+                             [self.zoomedView.zoomPlaceholderView.superview insertSubview:self.zoomedView aboveSubview:self.zoomedView.zoomPlaceholderView];
                              [self.zoomedView.zoomPlaceholderView removeFromSuperview];
                              self.zoomedView.zoomPlaceholderView = nil;
                              // hide window
