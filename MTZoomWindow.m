@@ -77,6 +77,15 @@
         _zoomGestureRecognizers = [NSMutableSet set];
         // using setter on purpose here
         self.zoomGestures = MTZoomGestureTap | MTZoomGesturePinch;
+        
+        // iOS 6 Hacks: willChange and didChange won't get called after launching the Application
+        UIInterfaceOrientation statusBarOrientation = [[UIApplication sharedApplication] statusBarOrientation];
+        if (UIInterfaceOrientationIsLandscape(statusBarOrientation)) {
+            [self setupForOrientation:UIInterfaceOrientationPortraitUpsideDown forceLayout:YES];
+        } else if (statusBarOrientation == UIInterfaceOrientationPortraitUpsideDown) {
+            [self setupForOrientation:UIInterfaceOrientationPortrait forceLayout:YES];
+        }
+        self.frame = [UIScreen mainScreen].bounds;
 
         // register for orientation change notification
         [[NSNotificationCenter defaultCenter] addObserver:self
