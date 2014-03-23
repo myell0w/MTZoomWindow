@@ -138,6 +138,8 @@
                          self.zoomedView.frame = CGRectMake((self.bounds.size.width-size.width)/2.f, (self.bounds.size.height-size.height)/2.f,
                                                             size.width, size.height);
                      } completion:^(BOOL finished) {
+                         [self makeKeyWindow];
+                         
                          id<MTZoomWindowDelegate> delegate = view.zoomDelegate;
 
                          if ([delegate respondsToSelector:@selector(zoomWindow:didZoomInView:)]) {
@@ -171,6 +173,8 @@
                              // hide window
                              self.hidden = YES;
 
+                             [self.zoomedView.window makeKeyWindow];
+                             
                              id<MTZoomWindowDelegate> delegate = self.zoomedView.zoomDelegate;
 
                              if ([delegate respondsToSelector:@selector(zoomWindow:didZoomOutView:)]) {
